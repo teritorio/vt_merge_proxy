@@ -5,7 +5,12 @@ import requests
 import vector_tile_base
 
 
-class SourceMBTiles:
+class Source:
+    def tilejson(self):
+        return {}
+
+
+class SourceMBTiles(Source):
     def __init__(self, mbtiles: str):
         self.src = pymbtiles.MBtiles(mbtiles)
 
@@ -19,7 +24,7 @@ class SourceMBTiles:
             return [vector_tile_base.VectorTile(tile_data), tile_data]
 
 
-class SourceXYZ:
+class SourceXYZ(Source):
     def __init__(self, template_url: str):
         self.template_url = template_url
 
