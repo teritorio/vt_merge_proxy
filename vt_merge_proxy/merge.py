@@ -11,31 +11,36 @@ def get_attribute(attributes, key: str, default=None):
     return default if key not in attributes else attributes[key]
 
 
-def get_classes(fields, poi):
-    attributes = poi.attributes
+def get_classes(fields, feature):
+    attributes = feature.attributes
     return [get_attribute(attributes, field) for field in fields]
 
 
-def match_class_list(fields, poi, classes):
-    return get_classes(poi, fields) in classes
+def match_class_list(fields, feature, classes):
+    return get_classes(fields, feature) in classes
 
 
-def exclude_poi(fields, pois, classes):
+def exclude_features(fields, features, classes):
     if classes:
         return list(
-            filter(lambda poi: not match_class_list(fields, poi, classes), pois)
+            filter(
+                lambda feature: not match_class_list(fields, feature, classes), features
+            )
         )
     else:
-        return pois
+        return features
 
 
-def include_poi(fields, pois, classes):
+def include_features(fields, features, classes):
     if classes:
-        return list(filter(lambda poi: match_class_list(fields, poi, classes), pois))
+        return list(
+            filter(lambda feature: match_class_list(fields, feature, classes), features)
+        )
     else:
         return []
 
 
+# FIXME hardcoded fields
 def rank(features):
     grid = {}
     for f in features:
@@ -51,18 +56,12 @@ def rank(features):
         poi = sorted(
             group_features,
             key=lambda a: [
-                get_attribute(
-                    # FIXME check zoom def
-                    a.attributes,
-                    "tourism_zoom",
-                    18,
-                ),
-                get_attribute(a.attributes, "tourism_priority", 9999),
+                get_attribute(a.attributes, "zoom", 18),
+                get_attribute(a.attributes, "priority", 9999),
             ],
         )
-        # FIXME Does not work
         for rank, feature in enumerate(poi):
-            feature.attributes["tourism_rank"] = rank
+            feature.attributes["rank"] = rank
 
     return features
 
@@ -91,21 +90,21 @@ def build_feature(merge_tile_layer, f):
     feature.attributes = f.attributes._attr
 
 
-def build_tile(model, poi):
-    merge_poi = vector_tile_base.VectorTile()
+def build_tile(build_layer_name, model, features):
+    merge_tile = vector_tile_base.VectorTile()
     if model:
         for layer in model.layers:
-            if layer.name != "poi":
-                merge_tile_layer = merge_poi.add_layer(layer.name)
+            if layer.name != build_layer_name:
+                merge_tile_layer = merge_tile.add_layer(layer.name)
                 for feature in layer.features:
                     build_feature(merge_tile_layer, feature)
 
-    if poi:
-        merge_tile_layer = merge_poi.add_layer("poi")
-        for feature in poi:
+    if features:
+        merge_tile_layer = merge_tile.add_layer(build_layer_name)
+        for feature in features:
             build_feature(merge_tile_layer, feature)
 
-    return merge_poi
+    return merge_tile
 
 
 def merge_tile(
@@ -122,41 +121,43 @@ def merge_tile(
     if full_tile:
         full_tile_layer = layer_extract(full_tile, layer)
         if full_tile_layer:
-            full_poi = exclude_poi(fields, full_tile_layer.features, classes)
+            full_features = exclude_features(fields, full_tile_layer.features, classes)
         else:
-            full_poi = []
+            full_features = []
     else:
-        full_poi = None
+        full_features = None
 
     partial_tile, _ = partial.tile(z=z, x=x, y=y, url_params=url_params)
     if partial_tile:
         partial_tile_layer = layer_extract(partial_tile, layer)
         if partial_tile_layer:
-            partial_poi = include_poi(fields, partial_tile_layer.features, classes)
+            partial_features = include_features(
+                fields, partial_tile_layer.features, classes
+            )
         else:
-            partial_poi = []
+            partial_features = []
     else:
-        partial_poi = None
+        partial_features = None
 
-    if partial_poi is None or partial_tile_layer is None or not partial_poi:
-        if full_poi is None:
+    if partial_features is None or partial_tile_layer is None or not partial_features:
+        if full_features is None:
             return None
         elif full_tile_layer is None:
             return full_raw_tile
-        elif len(full_poi) == len(full_tile_layer.features):
+        elif len(full_features) == len(full_tile_layer.features):
             return full_raw_tile
         else:
-            merge_poi = build_tile(full_tile, full_poi)
-            return merge_poi.serialize()
+            merge_features = build_tile(layer, full_tile, full_features)
+            return merge_features.serialize()
 
     else:
-        if full_poi is None or full_tile_layer is None:
-            poi = partial_poi
+        if full_features is None or full_tile_layer is None:
+            features = partial_features
         else:
-            poi = rank(full_poi + partial_poi)
+            features = rank(full_features + partial_features)
 
-        merge_poi = build_tile(full_tile, poi)
-        return merge_poi.serialize()
+        merge_features = build_tile(layer, full_tile, features)
+        return merge_features.serialize()
 
 
 def merge_tilejson(public_tile_urls, full, partial, url_params: str):

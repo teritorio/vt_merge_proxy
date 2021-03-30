@@ -17,7 +17,7 @@ if not config.get("server"):
 public_tilejson_url = config["server"].get(
     "public_tilejson_url", "http://127.0.0.1:8000"
 )
-public_tile_urls = config["server"].get("public_tile_urls")
+public_tile_urls = config["server"].get("public_tile_urls", ["http://127.0.0.1:8000"])
 
 
 @app.get("/")
