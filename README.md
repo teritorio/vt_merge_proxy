@@ -5,7 +5,7 @@ Vector tile proxy to merge datasources
 # Run
 
 ```
-uvicorn vt_merge_proxy.server:app
+uvicorn --workers 4 vt_merge_proxy.server:app
 ```
 
 # Dev
