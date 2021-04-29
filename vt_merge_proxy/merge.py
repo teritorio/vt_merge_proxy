@@ -3,14 +3,15 @@ import random
 import vector_tile_base
 
 
-
 # Monkey patch
 def FeatureAttributes___setitem__(self, key, value):
-    if not isinstance(key, str) and not isinstance(key, other_str):
-        raise TypeError("Keys must be of type str or other_str")
+    if not isinstance(key, str) and not isinstance(key, bytes):
+        raise TypeError("Keys must be of type str or bytes")
     self._decode_attr()
     self._attr[key] = value
-    #self._encode_attr() # Disable encoding at each __setitem__()
+    # self._encode_attr() # Disable encoding at each __setitem__()
+
+
 vector_tile_base.FeatureAttributes.__setitem__ = FeatureAttributes___setitem__
 
 
@@ -107,7 +108,7 @@ def build_feature(merge_tile_layer, f):
 def build_tile(build_layer_name, model, features):
     layer = None
     if model:
-        for i, layer in enumerate(model.layers):
+        for layer in model.layers:
             if layer.name == build_layer_name:
                 layer.name = "_"
                 break
