@@ -97,25 +97,28 @@ def build_feature(merge_tile_layer, f):
         raise Exception(f.type)
 
     feature.id = f.id if f.id is not None else random.randrange(2 ** 32)
+    # FIXME decode/encode to be done only if changed
     f.attributes._decode_attr()
+    # FIXME Attribut re-encoding : slowest step
+    # https://github.com/mapbox/vector-tile-base/blob/master/vector_tile_base/engine.py#L251
     feature.attributes = f.attributes._attr
 
 
 def build_tile(build_layer_name, model, features):
-    merge_tile = vector_tile_base.VectorTile()
+    layer = None
     if model:
-        for layer in model.layers:
-            if layer.name != build_layer_name:
-                merge_tile_layer = merge_tile.add_layer(layer.name)
-                for feature in layer.features:
-                    build_feature(merge_tile_layer, feature)
+        for i, layer in enumerate(model.layers):
+            if layer.name == build_layer_name:
+                layer.name = "_"
+                break
+
+    layer = model.add_layer(build_layer_name)
 
     if features:
-        merge_tile_layer = merge_tile.add_layer(build_layer_name)
         for feature in features:
-            build_feature(merge_tile_layer, feature)
+            build_feature(layer, feature)
 
-    return merge_tile
+    return model
 
 
 def merge_tile(
