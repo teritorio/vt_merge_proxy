@@ -3,6 +3,17 @@ import random
 import vector_tile_base
 
 
+
+# Monkey patch
+def FeatureAttributes___setitem__(self, key, value):
+    if not isinstance(key, str) and not isinstance(key, other_str):
+        raise TypeError("Keys must be of type str or other_str")
+    self._decode_attr()
+    self._attr[key] = value
+    #self._encode_attr() # Disable encoding at each __setitem__()
+vector_tile_base.FeatureAttributes.__setitem__ = FeatureAttributes___setitem__
+
+
 def layer_extract(tile, layer_name: str):
     return next(filter(lambda layer: layer.name == layer_name, tile.layers), None)
 
@@ -61,7 +72,7 @@ def rank(features):
             ],
         )
         for rank, feature in enumerate(poi):
-            feature.attributes["rank"] = rank
+            feature.attributes["rank"] = rank  # Monkey patched to disable encoding
 
     return features
 
