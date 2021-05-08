@@ -36,6 +36,7 @@ class SourceXYZ(Source):
         if r.status_code == 200:
             return [vector_tile_base.VectorTile(r.content), r.content]
         else:
+            print(r)
             return [None, None]  # TODO deal with error
 
 
