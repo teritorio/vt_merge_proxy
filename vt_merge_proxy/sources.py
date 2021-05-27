@@ -23,6 +23,9 @@ class SourceMBTiles(Source):
             tile_data = gzip.decompress(tile_data)
             return [vector_tile_base.VectorTile(tile_data), tile_data]
 
+    def tilejson(self):
+        return self.src.meta
+
 
 class SourceXYZ(Source):
     def __init__(self, template_url: str):

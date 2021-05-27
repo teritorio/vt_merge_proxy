@@ -179,13 +179,14 @@ def merge_tilejson(public_tile_urls, full, partial, url_params: str):
     full_tilejson = full.tilejson()
     partial_tilejson = partial.tilejson()
 
-    attributions = partial_tilejson.get("attribution", "").split(
-        ","
-    ) + full_tilejson.get("attribution", "").split(",")
-    attributions = [
-        attribution.strip() for attribution in attributions if attribution.strip()
-    ]
-    attributions = ", ".join(attributions)
+    partial_attribution = partial_tilejson.get("attribution", "")
+    full_attribution = full_tilejson.get("attribution", "")
+    attributions = partial_attribution + "," + full_attribution
+    attributions = attributions.replace("/a> <a", "/a>,<a").split(",")
+    attributions = set(
+        [attribution.strip() for attribution in attributions if attribution.strip()]
+    )
+    attributions = " ".join(attributions)
     full_tilejson["attribution"] = attributions
 
     if public_tile_urls:
