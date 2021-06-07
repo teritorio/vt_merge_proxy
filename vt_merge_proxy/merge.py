@@ -131,7 +131,9 @@ def merge_tile(
 
     layer = merge_layer["layer"]
     fields = merge_layer["fields"]
-    classes = merge_layer["classes"]
+    classes = [
+        [c if c != "null" else None for c in cc] for cc in merge_layer["classes"]
+    ]
 
     if full_tile:
         full_tile_layer = layer_extract(full_tile, layer)
