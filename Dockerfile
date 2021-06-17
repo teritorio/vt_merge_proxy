@@ -1,6 +1,6 @@
 FROM python:3.9-alpine
 
-RUN apk update && apk add git
+RUN apk update && apk add git gcc geos-dev proj-util proj-dev musl-dev
 
 WORKDIR /app
 COPY requirements.txt requirements.txt

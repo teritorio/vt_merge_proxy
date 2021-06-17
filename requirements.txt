@@ -5,4 +5,4 @@ fastapi
 uvicorn
 pyyaml
 shapely
-pyproj
+pyproj < 3.0.0 # To be able to install on python:3.9-alpine
