@@ -4,6 +4,7 @@ from starlette.responses import RedirectResponse
 
 from .merge import merge_tile, merge_tilejson
 from .sources import sourceFactory
+from .tile_in_poly import TileInPoly
 
 app = FastAPI()
 
@@ -39,6 +40,10 @@ for (style_id, style_conf) in config["styles"].items():
     merge_layer = style_conf["merge_layer"]
     min_zoom = int(style_conf["output"]["min_zoom"])
 
+    tile_in_poly = None
+    if "polygon" in merge_layer:
+        tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
+
     @app.get(f"/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf")
     async def tile(z: int, x: int, y: int, request: Request):
         data = merge_tile(
@@ -49,6 +54,7 @@ for (style_id, style_conf) in config["styles"].items():
             x,
             y,
             url_params=str(request.query_params),
+            tile_in_poly=tile_in_poly,
         )
         return Response(content=data, media_type="application/vnd.vector-tile")
 

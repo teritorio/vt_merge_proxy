@@ -2,6 +2,8 @@ import random
 
 import vector_tile_base
 
+from .tile_in_poly import TileInPoly
+
 
 # Monkey patch
 def FeatureAttributes___setitem__(self, key, value):
@@ -32,21 +34,36 @@ def match_class_list(fields, feature, classes):
     return get_classes(fields, feature) in classes
 
 
-def exclude_features(fields, features, classes):
+def include_feature(fields, feature, classes, point_in_poly):
+    if not point_in_poly or point_in_poly(*feature.get_points()[0]):
+        return match_class_list(fields, feature, classes)
+    else:
+        return False
+
+
+def exclude_features(fields, features, classes, point_in_poly):
     if classes:
         return list(
             filter(
-                lambda feature: not match_class_list(fields, feature, classes), features
+                lambda feature: not include_feature(
+                    fields, feature, classes, point_in_poly
+                ),
+                features,
             )
         )
     else:
         return features
 
 
-def include_features(fields, features, classes):
+def include_features(fields, features, classes, point_in_poly):
     if classes:
         return list(
-            filter(lambda feature: match_class_list(fields, feature, classes), features)
+            filter(
+                lambda feature: include_feature(
+                    fields, feature, classes, point_in_poly
+                ),
+                features,
+            )
         )
     else:
         return []
@@ -123,11 +140,25 @@ def build_tile(build_layer_name, model, features):
 
 
 def merge_tile(
-    min_zoom, full, partial, merge_layer, z: int, x: int, y: int, url_params: str
+    min_zoom,
+    full,
+    partial,
+    merge_layer,
+    z: int,
+    x: int,
+    y: int,
+    url_params: str,
+    tile_in_poly: TileInPoly,
 ):
     full_tile, full_raw_tile = full.tile(z=z, x=x, y=y, url_params=url_params)
     if z < min_zoom:
         return full_raw_tile
+
+    if tile_in_poly and tile_in_poly.is_tile_outside_poly(z, x, y):
+        return full_raw_tile
+
+    if tile_in_poly and tile_in_poly.is_tile_inside_poly(z, x, y):
+        tile_in_poly = None  # Disable geo filter
 
     layer = merge_layer["layer"]
     fields = merge_layer["fields"]
@@ -138,7 +169,12 @@ def merge_tile(
     if full_tile:
         full_tile_layer = layer_extract(full_tile, layer)
         if full_tile_layer:
-            full_features = exclude_features(fields, full_tile_layer.features, classes)
+            full_features = exclude_features(
+                fields,
+                full_tile_layer.features,
+                classes,
+                tile_in_poly and tile_in_poly.point_in_poly(z, x, y),
+            )
         else:
             full_features = []
     else:
@@ -149,7 +185,10 @@ def merge_tile(
         partial_tile_layer = layer_extract(partial_tile, layer)
         if partial_tile_layer:
             partial_features = include_features(
-                fields, partial_tile_layer.features, classes
+                fields,
+                partial_tile_layer.features,
+                classes,
+                tile_in_poly and tile_in_poly.point_in_poly(z, x, y),
             )
         else:
             partial_features = []
