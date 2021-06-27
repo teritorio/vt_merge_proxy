@@ -143,7 +143,9 @@ def merge_tile(
     min_zoom,
     full,
     partial,
-    merge_layer,
+    layer,
+    fields,
+    classes,
     z: int,
     x: int,
     y: int,
@@ -159,12 +161,6 @@ def merge_tile(
 
     if tile_in_poly and tile_in_poly.is_tile_inside_poly(z, x, y):
         tile_in_poly = None  # Disable geo filter
-
-    layer = merge_layer["layer"]
-    fields = merge_layer["fields"]
-    classes = [
-        [c if c != "null" else None for c in cc] for cc in merge_layer["classes"]
-    ]
 
     if full_tile:
         full_tile_layer = layer_extract(full_tile, layer)

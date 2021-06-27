@@ -44,12 +44,21 @@ for (style_id, style_conf) in config["styles"].items():
     if "polygon" in merge_layer:
         tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
 
+    layer = merge_layer["layer"]
+    fields = merge_layer["fields"]
+    classes = []
+    for cc in merge_layer["classes"]:
+        cc.extend([None] * (3 - len(cc)))
+        classes.append(cc)
+
     @app.get(f"/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf")
     async def tile(z: int, x: int, y: int, request: Request):
         data = merge_tile(
             min_zoom,
             *sources,
-            merge_layer,
+            layer,
+            fields,
+            classes,
             z,
             x,
             y,
