@@ -36,11 +36,8 @@ class SourceXYZ(Source):
         if url_params:
             url = f"{url}?{url_params}"
         r = requests.get(url)
-        if r.status_code == 200:
-            return [vector_tile_base.VectorTile(r.content), r.content]
-        else:
-            print(r)
-            return [None, None]  # TODO deal with error
+        r.raise_for_status()
+        return [vector_tile_base.VectorTile(r.content), r.content]
 
 
 class SourceTileJSON(SourceXYZ):

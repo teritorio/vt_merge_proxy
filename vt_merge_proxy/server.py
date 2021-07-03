@@ -1,5 +1,6 @@
+import requests
 import yaml
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from starlette.responses import RedirectResponse
 
 from .merge import merge_tile, merge_tilejson
@@ -53,26 +54,36 @@ for (style_id, style_conf) in config["styles"].items():
 
     @app.get(f"/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf")
     async def tile(z: int, x: int, y: int, request: Request):
-        data = merge_tile(
-            min_zoom,
-            *sources,
-            layer,
-            fields,
-            classes,
-            z,
-            x,
-            y,
-            url_params=str(request.query_params),
-            tile_in_poly=tile_in_poly,
-        )
-        return Response(content=data, media_type="application/vnd.vector-tile")
+        try:
+            data = merge_tile(
+                min_zoom,
+                *sources,
+                layer,
+                fields,
+                classes,
+                z,
+                x,
+                y,
+                url_params=str(request.query_params),
+                tile_in_poly=tile_in_poly,
+            )
+            return Response(content=data, media_type="application/vnd.vector-tile")
+        except requests.exceptions.HTTPError as error:
+            raise HTTPException(
+                status_code=error.response.status_code, detail=error.response.reason
+            )
 
     @app.get(f"/data/{style_id}.json")
     async def tilejson(request: Request):
-        style_public_tile_urls = [
-            f"{public_tile_url}/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf"
-            for public_tile_url in public_tile_urls
-        ]
-        return merge_tilejson(
-            style_public_tile_urls, *sources, url_params=str(request.query_params)
-        )
+        try:
+            style_public_tile_urls = [
+                f"{public_tile_url}/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf"
+                for public_tile_url in public_tile_urls
+            ]
+            return merge_tilejson(
+                style_public_tile_urls, *sources, url_params=str(request.query_params)
+            )
+        except requests.exceptions.HTTPError as error:
+            raise HTTPException(
+                status_code=error.response.status_code, detail=error.response.reason
+            )
