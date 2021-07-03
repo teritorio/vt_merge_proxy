@@ -1,20 +1,43 @@
 # vt_merge_proxy
 
-Vector tile proxy to merge datasources
+Vector tiles proxy to merge datasources
 
-# Run
 
+Install
+```
+pip install -r requirements.txt
+```
+
+Run with a ASGI compatible server. Eg uvicorn:
 ```
 uvicorn --workers 4 vt_merge_proxy.server:app
 ```
+A cache must me be provided on top to improve performance.
+
+
+Alternatively, just use the provided docker-compose configuration.
 
 # Dev
 
+Install
+```
+pip install -r requirements.txt -r requirements-dev.txt -r requirements-test.txt
+```
+
+Run
 ```
 uvicorn vt_merge_proxy.server:app --reload
 ```
 
-# Config
+Before commit check:
+```
+isort vt_merge_proxy/
+black vt_merge_proxy/
+flake8 vt_merge_proxy/
+mypy vt_merge_proxy/
+```
+
+# Configuration
 
 `config.yaml`
 
