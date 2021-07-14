@@ -57,7 +57,8 @@ for (style_id, style_conf) in config["styles"].items():
         try:
             data = merge_tile(
                 min_zoom,
-                *sources,
+                sources[0],
+                sources[1],
                 layer,
                 fields,
                 classes,
@@ -81,7 +82,10 @@ for (style_id, style_conf) in config["styles"].items():
                 for public_tile_url in public_tile_urls
             ]
             return merge_tilejson(
-                style_public_tile_urls, *sources, url_params=str(request.query_params)
+                style_public_tile_urls,
+                sources[0],
+                sources[1],
+                url_params=str(request.query_params),
             )
         except requests.exceptions.HTTPError as error:
             raise HTTPException(

@@ -1,7 +1,8 @@
 import copy
 import random
+from typing import Optional
 
-import vector_tile_base
+import vector_tile_base  # type: ignore
 
 from .tile_in_poly import TileInPoly
 
@@ -151,7 +152,7 @@ def merge_tile(
     x: int,
     y: int,
     url_params: str,
-    tile_in_poly: TileInPoly,
+    tile_in_poly: Optional[TileInPoly],
 ):
     full_tile, full_raw_tile = full.tile(z=z, x=x, y=y, url_params=url_params)
     if z < min_zoom:

@@ -1,8 +1,13 @@
 import json
 
 import pyproj
-from shapely.geometry import GeometryCollection, LineString, Point, shape
-from shapely.ops import transform
+from shapely.geometry import (  # type: ignore
+    GeometryCollection,
+    LineString,
+    Point,
+    shape,
+)
+from shapely.ops import transform  # type: ignore
 
 from .globalmaptiles import GlobalMercator
 

@@ -1,8 +1,8 @@
 import gzip
 
-import pymbtiles
+import pymbtiles  # type: ignore
 import requests
-import vector_tile_base
+import vector_tile_base  # type: ignore
 
 
 class Source:
