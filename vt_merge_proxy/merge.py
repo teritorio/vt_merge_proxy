@@ -1,3 +1,4 @@
+import copy
 import random
 
 import vector_tile_base
@@ -224,12 +225,14 @@ def merge_tilejson(public_tile_urls, full, partial, url_params: str):
         [attribution.strip() for attribution in attributions if attribution.strip()]
     )
     attributions = " ".join(attributions)
-    full_tilejson["attribution"] = attributions
+
+    tilejson = copy.deepcopy(full_tilejson)
+    tilejson["attribution"] = attributions
 
     if public_tile_urls:
-        full_tilejson["tiles"] = public_tile_urls
+        tilejson["tiles"] = public_tile_urls
 
     if url_params:
-        full_tilejson["tiles"] = [url + f"?{url_params}" for url in public_tile_urls]
+        tilejson["tiles"] = [url + f"?{url_params}" for url in public_tile_urls]
 
-    return full_tilejson
+    return tilejson
