@@ -47,10 +47,7 @@ for (style_id, style_conf) in config["styles"].items():
 
     layer = merge_layer["layer"]
     fields = merge_layer["fields"]
-    classes = []
-    for cc in merge_layer["classes"]:
-        cc.extend([None] * (3 - len(cc)))
-        classes.append(cc)
+    classes = merge_layer["classes"]
 
     @app.get(f"/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf")
     async def tile(z: int, x: int, y: int, request: Request):

@@ -33,7 +33,8 @@ def get_classes(fields, feature):
 
 
 def match_class_list(fields, feature, classes):
-    return get_classes(fields, feature) in classes
+    feature_class = get_classes(fields, feature)
+    return any(map(lambda classs: classs == feature_class[:len(classs)], classes))
 
 
 def include_feature(fields, feature, classes, point_in_poly):
