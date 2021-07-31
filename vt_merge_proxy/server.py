@@ -64,6 +64,7 @@ for (style_id, style_conf) in config["styles"].items():
                 z,
                 x,
                 y,
+                headers=request.headers,
                 url_params=str(request.query_params),
                 tile_in_poly=tile_in_poly,
             )
@@ -84,6 +85,7 @@ for (style_id, style_conf) in config["styles"].items():
                 style_public_tile_urls,
                 sources[0],
                 sources[1],
+                headers=request.headers,
                 url_params=str(request.query_params),
             )
         except requests.exceptions.HTTPError as error:

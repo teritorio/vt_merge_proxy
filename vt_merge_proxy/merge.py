@@ -152,10 +152,13 @@ def merge_tile(
     z: int,
     x: int,
     y: int,
+    headers,
     url_params: str,
     tile_in_poly: Optional[TileInPoly],
 ):
-    full_tile, full_raw_tile = full.tile(z=z, x=x, y=y, url_params=url_params)
+    full_tile, full_raw_tile = full.tile(
+        z=z, x=x, y=y, headers=headers, url_params=url_params
+    )
     if z < min_zoom:
         return full_raw_tile
 
@@ -179,7 +182,9 @@ def merge_tile(
     else:
         full_features = None
 
-    partial_tile, _ = partial.tile(z=z, x=x, y=y, url_params=url_params)
+    partial_tile, _ = partial.tile(
+        z=z, x=x, y=y, headers=headers, url_params=url_params
+    )
     if partial_tile:
         partial_tile_layer = layer_extract(partial_tile, layer)
         if partial_tile_layer:
@@ -215,9 +220,9 @@ def merge_tile(
         return merge_features.serialize()
 
 
-def merge_tilejson(public_tile_urls, full, partial, url_params: str):
-    full_tilejson = full.tilejson()
-    partial_tilejson = partial.tilejson()
+def merge_tilejson(public_tile_urls, full, partial, headers, url_params: str):
+    full_tilejson = full.tilejson(headers, url_params)
+    partial_tilejson = partial.tilejson(headers, url_params)
 
     partial_attribution = partial_tilejson.get("attribution", "")
     full_attribution = full_tilejson.get("attribution", "")
