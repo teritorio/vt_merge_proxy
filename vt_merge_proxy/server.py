@@ -1,3 +1,5 @@
+import json
+
 import requests
 import yaml
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -47,7 +49,7 @@ for (style_id, style_conf) in config["styles"].items():
 
     layer = merge_layer["layer"]
     fields = merge_layer["fields"]
-    classes = merge_layer["classes"]
+    classes = json.loads(open(merge_layer["classes"], "r").read())
 
     @app.get(f"/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf")
     async def tile(z: int, x: int, y: int, request: Request):

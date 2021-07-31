@@ -55,8 +55,7 @@ styles:
             polygon: dax.geojson
             layer: poi_tourism
             fields: [superclass, class, subclass]
-            classes:
-                - [catering, food, restaurant]
+            classes: classes.json
 
         output:
             min_zoom: 14
