@@ -26,7 +26,7 @@ pip install -r requirements.txt -r requirements-dev.txt -r requirements-test.txt
 
 Run
 ```
-uvicorn vt_merge_proxy.server:app --reload
+CONFIG=config.yaml uvicorn vt_merge_proxy.server:app --reload
 ```
 
 Before commit check:

@@ -1,4 +1,5 @@
 import json
+import os
 
 import requests
 import yaml
@@ -12,7 +13,9 @@ from .tile_in_poly import TileInPoly
 app = FastAPI()
 
 
-config = yaml.load(open("config.yaml").read(), Loader=yaml.BaseLoader)
+config = yaml.load(
+    open(os.environ.get("CONFIG", "config.yaml")).read(), Loader=yaml.BaseLoader
+)
 print(config)
 
 if not config.get("server"):
