@@ -59,7 +59,7 @@ class SourceTileJSON(SourceXYZ):
         return self._tilejson
 
 
-def sourceFactory(source):
+def sourceFactory(source) -> Source:
     if "tilejson_url" in source:
         return SourceTileJSON(**source)
     elif "mbtiles" in source:

@@ -1,5 +1,7 @@
 import json
 import os
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 import requests
 import yaml
@@ -7,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from starlette.responses import RedirectResponse
 
 from .merge import merge_tile, merge_tilejson
-from .sources import sourceFactory
+from .sources import Source, sourceFactory
 from .tile_in_poly import TileInPoly
 
 app = FastAPI()
@@ -41,57 +43,75 @@ async def styles():
     ]
 
 
+@dataclass
+class MergeConfig(object):
+    sources: List[Source]
+    min_zoom: int
+    tile_in_poly: Optional[TileInPoly]
+    layer: str
+    fields: List[str]
+    classes: List
+
+
+merge_config = {}
 for (style_id, style_conf) in config["styles"].items():
-    sources = [sourceFactory(source) for source in style_conf["sources"].values()]
     merge_layer = style_conf["merge_layer"]
-    min_zoom = int(style_conf["output"]["min_zoom"])
 
     tile_in_poly = None
     if "polygon" in merge_layer:
         tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
 
-    layer = merge_layer["layer"]
-    fields = merge_layer["fields"]
-    classes = json.loads(open(merge_layer["classes"], "r").read())
+    merge_config[style_id] = MergeConfig(
+        sources=[sourceFactory(source) for source in style_conf["sources"].values()],
+        min_zoom=int(style_conf["output"]["min_zoom"]),
+        tile_in_poly=tile_in_poly,
+        layer=merge_layer["layer"],
+        fields=merge_layer["fields"],
+        classes=json.loads(open(merge_layer["classes"], "r").read()),
+    )
 
-    @app.get(f"/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf")
-    async def tile(z: int, x: int, y: int, request: Request):
-        try:
-            data = merge_tile(
-                min_zoom,
-                sources[0],
-                sources[1],
-                layer,
-                fields,
-                classes,
-                z,
-                x,
-                y,
-                headers=request.headers,
-                url_params=str(request.query_params),
-                tile_in_poly=tile_in_poly,
-            )
-            return Response(content=data, media_type="application/vnd.vector-tile")
-        except requests.exceptions.HTTPError as error:
-            raise HTTPException(
-                status_code=error.response.status_code, detail=error.response.reason
-            )
 
-    @app.get(f"/data/{style_id}.json")
-    async def tilejson(request: Request):
-        try:
-            style_public_tile_urls = [
-                f"{public_tile_url}/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf"
-                for public_tile_url in public_tile_urls
-            ]
-            return merge_tilejson(
-                style_public_tile_urls,
-                sources[0],
-                sources[1],
-                headers=request.headers,
-                url_params=str(request.query_params),
-            )
-        except requests.exceptions.HTTPError as error:
-            raise HTTPException(
-                status_code=error.response.status_code, detail=error.response.reason
-            )
+@app.get("/data/{style_id}/{z}/{x}/{y}.pbf")
+async def tile(style_id: str, z: int, x: int, y: int, request: Request):
+    try:
+        mc = merge_config[style_id]
+        data = merge_tile(
+            mc.min_zoom,
+            mc.sources[0],
+            mc.sources[1],
+            mc.layer,
+            mc.fields,
+            mc.classes,
+            z,
+            x,
+            y,
+            headers=request.headers,
+            url_params=str(request.query_params),
+            tile_in_poly=mc.tile_in_poly,
+        )
+        return Response(content=data, media_type="application/vnd.vector-tile")
+    except requests.exceptions.HTTPError as error:
+        raise HTTPException(
+            status_code=error.response.status_code, detail=error.response.reason
+        )
+
+
+@app.get("/data/{style_id}.json")
+async def tilejson(style_id: str, request: Request):
+    try:
+        style_public_tile_urls = [
+            f"{public_tile_url}/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf"
+            for public_tile_url in public_tile_urls
+        ]
+        mc = merge_config[style_id]
+        return merge_tilejson(
+            style_public_tile_urls,
+            mc.sources[0],
+            mc.sources[1],
+            headers=request.headers,
+            url_params=str(request.query_params),
+        )
+    except requests.exceptions.HTTPError as error:
+        raise HTTPException(
+            status_code=error.response.status_code, detail=error.response.reason
+        )
