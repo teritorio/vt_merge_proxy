@@ -61,7 +61,6 @@ styles:
             min_zoom: 14
 
 server:
-    public_tilejson_url: https://vecto-dev.teritorio.xyz
     public_tile_urls:
        - https://vecto-dev.teritorio.xyz
 ```

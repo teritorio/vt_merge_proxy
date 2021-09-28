@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 import requests
 import yaml
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from starlette.responses import RedirectResponse
 
 from .merge import merge_tile, merge_tilejson
@@ -23,9 +23,6 @@ print(config)
 if not config.get("server"):
     config["server"] = {}
 
-public_tilejson_url = config["server"].get(
-    "public_tilejson_url", "http://127.0.0.1:8000"
-)
 public_tile_urls = config["server"].get("public_tile_urls", ["http://127.0.0.1:8000"])
 
 
@@ -35,10 +32,27 @@ async def read_root():
 
 
 @app.get("/styles.json")
-async def styles():
+async def styles(
+    request: Request,
+    x_forwarded_proto: Optional[str] = Header(None),
+    host: Optional[str] = Header("127.0.0.1"),
+    x_forwarded_host: Optional[str] = Header(None),
+    x_forwarded_port: Optional[str] = Header(None),
+):
+
+    proto = x_forwarded_proto or request.url.scheme
+    host = x_forwarded_host or request.url.hostname
+    port = x_forwarded_port or request.url.port
+    if port:
+        port = f":{port}"
+
     return [
         # TODO add version and name
-        {"id": style_id, "url": f"{public_tilejson_url}/data/{style_id}.json"}
+        {
+            "id": style_id,
+            "url": f"{proto}://{host}{port}"
+            + app.url_path_for("tilejson", style_id=style_id),
+        }
         for (style_id, style_conf) in config["styles"].items()
     ]
 
