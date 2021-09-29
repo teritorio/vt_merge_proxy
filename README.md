@@ -61,6 +61,6 @@ styles:
             min_zoom: 14
 
 server:
-    public_tile_urls:
-       - https://vecto-dev.teritorio.xyz
+    public_base_path:
+    public_tile_url_prefixes: []
 ```

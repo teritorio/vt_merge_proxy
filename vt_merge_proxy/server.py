@@ -23,7 +23,8 @@ print(config)
 if not config.get("server"):
     config["server"] = {}
 
-public_tile_urls = config["server"].get("public_tile_urls", ["http://127.0.0.1:8000"])
+public_base_path = config["server"].get("public_base_path", "")
+public_tile_url_prefixes = config["server"].get("public_tile_url_prefixes", [])
 
 
 @app.get("/")
@@ -31,26 +32,25 @@ async def read_root():
     return RedirectResponse(url="/styles.json")
 
 
-@app.get("/styles.json")
-async def styles(
-    request: Request,
-    x_forwarded_proto: Optional[str] = Header(None),
-    host: Optional[str] = Header("127.0.0.1"),
-    x_forwarded_host: Optional[str] = Header(None),
-    x_forwarded_port: Optional[str] = Header(None),
-):
-
-    proto = x_forwarded_proto or request.url.scheme
-    host = x_forwarded_host or request.url.hostname
-    port = x_forwarded_port or request.url.port
+def public_url(request: Request, host_prefix=""):
+    h = request.headers
+    proto = h.get("X-Forwarded-Proto", request.url.scheme)
+    host = host_prefix + h.get("X-Forwarded-Host", request.url.hostname)
+    port = h.get("X-Forwarded-Port", request.url.port)
     if port:
         port = f":{port}"
+    return f"{proto}://{host}{port}"
+
+
+@app.get("/styles.json")
+async def styles(request: Request):
 
     return [
         # TODO add version and name
         {
             "id": style_id,
-            "url": f"{proto}://{host}{port}"
+            "url": public_url(request)
+            + public_base_path
             + app.url_path_for("tilejson", style_id=style_id),
         }
         for (style_id, style_conf) in config["styles"].items()
@@ -113,10 +113,15 @@ async def tile(style_id: str, z: int, x: int, y: int, request: Request):
 @app.get("/data/{style_id}.json")
 async def tilejson(style_id: str, request: Request):
     try:
-        style_public_tile_urls = [
-            f"{public_tile_url}/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf"
-            for public_tile_url in public_tile_urls
-        ]
+        path = f"{public_base_path}/data/{style_id}/{{z}}/{{x}}/{{y}}.pbf"
+        if not public_tile_url_prefixes:
+            style_public_tile_urls = [public_url(request) + path]
+        else:
+            style_public_tile_urls = [
+                public_url(request, host_prefix=public_tile_url_prefixe) + path
+                for public_tile_url_prefixe in public_tile_url_prefixes
+            ]
+
         mc = merge_config[style_id]
         return merge_tilejson(
             style_public_tile_urls,
