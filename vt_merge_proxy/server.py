@@ -1,7 +1,8 @@
 import json
 import os
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 import yaml
@@ -27,9 +28,19 @@ public_base_path = config["server"].get("public_base_path", "")
 public_tile_url_prefixes = config["server"].get("public_tile_url_prefixes", [])
 
 
+config_style_by_host: Dict[str, Dict[str, Any]] = defaultdict(dict)
+for (config_id, style) in config["styles"].items():
+    for host in style["hosts"]:
+        config_style_by_host[host][style["id"]] = style
+
+
 @app.get("/")
 async def read_root():
     return RedirectResponse(url="/styles.json")
+
+
+def public_host(request: Request):
+    return request.headers.get("X-Forwarded-Host", request.url.hostname)
 
 
 def public_url(request: Request, host_prefix=""):
@@ -44,6 +55,9 @@ def public_url(request: Request, host_prefix=""):
 
 @app.get("/styles.json")
 async def styles(request: Request):
+    host = public_host(request)
+    if host not in config_style_by_host:
+        raise HTTPException(status_code=404)
 
     return [
         # TODO add version and name
@@ -51,9 +65,9 @@ async def styles(request: Request):
             "id": style_conf["id"],
             "url": public_url(request)
             + public_base_path
-            + app.url_path_for("tilejson", style_id=style_conf["id"]),
+            + app.url_path_for("tilejson", style_id=style_id),
         }
-        for (config_id, style_conf) in config["styles"].items()
+        for (style_id, style_conf) in config_style_by_host[host].items()
     ]
 
 
@@ -67,28 +81,33 @@ class MergeConfig(object):
     classes: List
 
 
-merge_config = {}
-for (config_id, style_conf) in config["styles"].items():
-    merge_layer = style_conf["merge_layer"]
+merge_config: Dict[str, Dict[str, Any]] = defaultdict(dict)
+for (host, style_id_confs) in config_style_by_host.items():
+    for (style_id, conf) in style_id_confs.items():
+        merge_layer = conf["merge_layer"]
 
-    tile_in_poly = None
-    if "polygon" in merge_layer:
-        tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
+        tile_in_poly = None
+        if "polygon" in merge_layer:
+            tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
 
-    merge_config[style_conf["id"]] = MergeConfig(
-        sources=[sourceFactory(source) for source in style_conf["sources"].values()],
-        min_zoom=int(style_conf["output"]["min_zoom"]),
-        tile_in_poly=tile_in_poly,
-        layer=merge_layer["layer"],
-        fields=merge_layer["fields"],
-        classes=json.loads(open(merge_layer["classes"], "r").read()),
-    )
+        merge_config[host][style_id] = MergeConfig(
+            sources=[sourceFactory(source) for source in conf["sources"].values()],
+            min_zoom=int(conf["output"]["min_zoom"]),
+            tile_in_poly=tile_in_poly,
+            layer=merge_layer["layer"],
+            fields=merge_layer["fields"],
+            classes=json.loads(open(merge_layer["classes"], "r").read()),
+        )
 
 
 @app.get("/data/{style_id}/{z}/{x}/{y}.pbf")
 async def tile(style_id: str, z: int, x: int, y: int, request: Request):
     try:
-        mc = merge_config[style_id]
+        host = public_host(request)
+        if host not in config_style_by_host:
+            raise HTTPException(status_code=404)
+
+        mc = merge_config[host][style_id]
         data = merge_tile(
             mc.min_zoom,
             mc.sources[0],
@@ -122,7 +141,11 @@ async def tilejson(style_id: str, request: Request):
                 for public_tile_url_prefixe in public_tile_url_prefixes
             ]
 
-        mc = merge_config[style_id]
+        host = public_host(request)
+        if host not in config_style_by_host:
+            raise HTTPException(status_code=404)
+
+        mc = merge_config[host][style_id]
         return merge_tilejson(
             style_public_tile_urls,
             mc.sources[0],

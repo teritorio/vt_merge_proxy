@@ -43,7 +43,12 @@ mypy vt_merge_proxy/
 
 ```yaml
 styles:
-    teritorio-proxy:
+    default:
+        id: teritorio-proxy
+        hosts:
+            - localhost
+            - 127.0.0.1
+
         sources:
             full:
                 tilejson_url: https://vecto-dev.teritorio.xyz/data/teritorio-dev.json
