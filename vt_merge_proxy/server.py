@@ -48,12 +48,12 @@ async def styles(request: Request):
     return [
         # TODO add version and name
         {
-            "id": style_id,
+            "id": style_conf["id"],
             "url": public_url(request)
             + public_base_path
-            + app.url_path_for("tilejson", style_id=style_id),
+            + app.url_path_for("tilejson", style_id=style_conf["id"]),
         }
-        for (style_id, style_conf) in config["styles"].items()
+        for (config_id, style_conf) in config["styles"].items()
     ]
 
 
@@ -68,14 +68,14 @@ class MergeConfig(object):
 
 
 merge_config = {}
-for (style_id, style_conf) in config["styles"].items():
+for (config_id, style_conf) in config["styles"].items():
     merge_layer = style_conf["merge_layer"]
 
     tile_in_poly = None
     if "polygon" in merge_layer:
         tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
 
-    merge_config[style_id] = MergeConfig(
+    merge_config[style_conf["id"]] = MergeConfig(
         sources=[sourceFactory(source) for source in style_conf["sources"].values()],
         min_zoom=int(style_conf["output"]["min_zoom"]),
         tile_in_poly=tile_in_poly,
