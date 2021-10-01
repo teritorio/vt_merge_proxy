@@ -40,17 +40,36 @@ async def read_root():
 
 
 def public_host(request: Request):
-    return request.headers.get("X-Forwarded-Host", request.url.hostname)
+    forwarded = request.headers.get("Forwarded")
+    if forwarded:
+        for f in forwarded.split(",")[0].split(";"):
+            k, v = f.split("=")
+            if k == "host":
+                return v.split(":")[0]
+    return request.url.hostname
 
 
 def public_url(request: Request, host_prefix=""):
-    h = request.headers
-    proto = h.get("X-Forwarded-Proto", request.url.scheme)
-    host = host_prefix + h.get("X-Forwarded-Host", request.url.hostname)
-    port = h.get("X-Forwarded-Port", request.url.port)
-    if port:
-        port = f":{port}"
-    return f"{proto}://{host}{port}"
+    d = {
+        "proto": None,
+        "host": None,
+        "port": None,
+    }
+
+    try:
+        forwarded = request.headers.get("Forwarded")
+        for f in forwarded.split(",")[0].split(";"):
+            k, v = f.split("=")
+            d[k] = v
+    except Exception:
+        pass
+    finally:
+        proto = d["proto"] or request.url.scheme or "http"
+        host = d["host"] or request.url.hostname or "localhost"
+        port = d["port"] or request.url.port or ""
+        if port:
+            port = f":{port}"
+        return f"{proto}://{host}{port}"
 
 
 @app.get("/styles.json")
