@@ -61,8 +61,10 @@ class SourceTileJSON(SourceXYZ):
 
 def sourceFactory(source) -> Source:
     if "tilejson_url" in source:
-        return SourceTileJSON(**source)
+        return SourceTileJSON(
+            tilejson_url=source.get("tilejson_url"), tile_url=source.get("tile_url")
+        )
     elif "mbtiles" in source:
-        return SourceMBTiles(**source)
+        return SourceMBTiles(mbtiles=source.get("mbtiles"))
     else:
         raise NotImplementedError(source)
