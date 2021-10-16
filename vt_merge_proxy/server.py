@@ -69,7 +69,7 @@ def public_url(request: Request, host_prefix=""):
         port = d["port"] or request.url.port or ""
         if port:
             port = f":{port}"
-        return f"{proto}://{host}{port}"
+        return f"{proto}://{host_prefix}{host}{port}"
 
 
 @app.get("/styles.json")
