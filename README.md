@@ -48,6 +48,7 @@ styles:
         hosts:
             - localhost
             - 127.0.0.1
+        polygon: dax.geojson
 
         sources:
             full:
@@ -57,7 +58,6 @@ styles:
                 mbtiles: restaurent-20200819.mbtiles
 
         merge_layer:
-            polygon: dax.geojson
             layer: poi_tourism
             fields: [superclass, class, subclass]
             classes: classes.json

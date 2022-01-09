@@ -106,8 +106,8 @@ for (host, style_id_confs) in config_style_by_host.items():
         merge_layer = conf["merge_layer"]
 
         tile_in_poly = None
-        if "polygon" in merge_layer:
-            tile_in_poly = TileInPoly(open(merge_layer["polygon"]))
+        if "polygon" in conf:
+            tile_in_poly = TileInPoly(open(conf["polygon"]))
 
         merge_config[host][style_id] = MergeConfig(
             sources=[sourceFactory(source) for source in conf["sources"].values()],
