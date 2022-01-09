@@ -13,10 +13,14 @@ class TileInPoly:
     WIDTH = 4096
 
     def __init__(self, geosjon):
-        features = json.load(geosjon)["features"]
-        self.polygon = GeometryCollection(
-            [shape(feature["geometry"]) for feature in features]
-        )
+        j = json.load(geosjon)
+        if j.get("type") == "FeatureCollection":
+            features = j["features"]
+            self.polygon = GeometryCollection(
+                [shape(feature["geometry"]) for feature in features]
+            )
+        else:
+            self.polygon = shape(j)
 
         wgs84 = pyproj.CRS("EPSG:4326")
         wmer = pyproj.CRS("EPSG:3857")
