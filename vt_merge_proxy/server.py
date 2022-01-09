@@ -91,20 +91,22 @@ async def styles(request: Request):
 
 
 @dataclass
+class LayerConfig(object):
+    fields: List[str]
+    classes: List
+
+
+@dataclass
 class MergeConfig(object):
     sources: List[Source]
     min_zoom: int
     tile_in_poly: Optional[TileInPoly]
-    layer: str
-    fields: List[str]
-    classes: List
+    layers: Dict[str, LayerConfig]
 
 
 merge_config: Dict[str, Dict[str, Any]] = defaultdict(dict)
 for (host, style_id_confs) in config_style_by_host.items():
     for (style_id, conf) in style_id_confs.items():
-        merge_layer = conf["merge_layer"]
-
         tile_in_poly = None
         if "polygon" in conf:
             tile_in_poly = TileInPoly(open(conf["polygon"]))
@@ -113,9 +115,15 @@ for (host, style_id_confs) in config_style_by_host.items():
             sources=[sourceFactory(source) for source in conf["sources"].values()],
             min_zoom=int(conf["output"]["min_zoom"]),
             tile_in_poly=tile_in_poly,
-            layer=merge_layer["layer"],
-            fields=merge_layer["fields"],
-            classes=json.loads(open(merge_layer["classes"], "r").read()),
+            layers={
+                layer: LayerConfig(
+                    fields=merge_layer and merge_layer.get("fields"),
+                    classes=merge_layer
+                    and merge_layer.get("classes")
+                    and json.loads(open(merge_layer["classes"], "r").read()),
+                )
+                for layer, merge_layer in conf["merge_layers"].items()
+            },
         )
 
 
@@ -131,9 +139,7 @@ async def tile(style_id: str, z: int, x: int, y: int, request: Request):
             mc.min_zoom,
             mc.sources[0],
             mc.sources[1],
-            mc.layer,
-            mc.fields,
-            mc.classes,
+            mc.layers,
             z,
             x,
             y,
@@ -169,6 +175,7 @@ async def tilejson(style_id: str, request: Request):
             style_public_tile_urls,
             mc.sources[0],
             mc.sources[1],
+            mc.layers.keys(),
             headers=request.headers,
             url_params=str(request.query_params),
         )

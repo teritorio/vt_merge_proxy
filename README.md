@@ -57,10 +57,11 @@ styles:
             partial:
                 mbtiles: restaurent-20200819.mbtiles
 
-        merge_layer:
-            layer: poi_tourism
-            fields: [superclass, class, subclass]
-            classes: classes.json
+        merge_layers:
+            poi_tourism:
+                fields: [superclass, class, subclass]
+                classes: classes.json
+            route_tourism:
 
         output:
             min_zoom: 14

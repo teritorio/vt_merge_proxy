@@ -1,6 +1,6 @@
 import copy
 import random
-from typing import Optional
+from typing import Dict, List, Optional
 
 import vector_tile_base  # type: ignore
 
@@ -125,17 +125,15 @@ def build_feature(merge_tile_layer, f):
     feature.attributes = f.attributes._attr
 
 
-def build_tile(build_layer_name, model, features):
-    layer = None
-    if model:
-        for layer in model.layers:
-            if layer.name == build_layer_name:
-                layer.name = "_"
-                break
+def build_tile(model, layer_features: Dict[str, List[object]]):
+    disabled_layers = layer_features.keys()
+    for layer in model.layers:
+        if layer.name in disabled_layers:
+            layer.name = "_" + layer.name
+            break
 
-    layer = model.add_layer(build_layer_name)
-
-    if features:
+    for layer_name, features in layer_features.items():
+        layer = model.add_layer(layer_name)
         for feature in features:
             build_feature(layer, feature)
 
@@ -146,9 +144,7 @@ def merge_tile(
     min_zoom,
     full,
     partial,
-    layer,
-    fields,
-    classes,
+    layers,
     z: int,
     x: int,
     y: int,
@@ -168,59 +164,81 @@ def merge_tile(
     if tile_in_poly and tile_in_poly.is_tile_inside_poly(z, x, y):
         tile_in_poly = None  # Disable geo filter
 
-    if full_tile:
-        full_tile_layer = layer_extract(full_tile, layer)
-        if full_tile_layer:
-            full_features = exclude_features(
-                fields,
-                full_tile_layer.features,
-                classes,
-                tile_in_poly and tile_in_poly.point_in_poly(z, x, y),
-            )
-        else:
-            full_features = []
-    else:
-        full_features = None
-
-    partial_tile, _ = partial.tile(
+    partial_tile, partial_raw_tile = partial.tile(
         z=z, x=x, y=y, headers=headers, url_params=url_params
     )
-    if partial_tile:
-        partial_tile_layer = layer_extract(partial_tile, layer)
-        if partial_tile_layer:
-            partial_features = include_features(
-                fields,
-                partial_tile_layer.features,
-                classes,
-                tile_in_poly and tile_in_poly.point_in_poly(z, x, y),
-            )
-        else:
-            partial_features = []
-    else:
-        partial_features = None
 
-    if partial_features is None or partial_tile_layer is None or not partial_features:
-        if full_features is None:
+    full_features = {}
+    full_features_same = {}
+    partial_features = {}
+    for layer, layer_config in layers.items():
+        if full_tile:
+            full_tile_layer = layer_extract(full_tile, layer)
+            if full_tile_layer:
+                if layer_config.fields:
+                    full_features[layer] = exclude_features(
+                        layer_config.fields,
+                        full_tile_layer.features,
+                        layer_config.classes,
+                        tile_in_poly and tile_in_poly.point_in_poly(z, x, y),
+                    )
+                    full_features_same[layer] = len(full_features[layer]) == len(
+                        full_tile_layer.features
+                    )
+                else:
+                    full_features[layer] = full_tile_layer.features
+                    full_features_same[layer] = True
+            else:
+                full_features[layer] = []
+
+        if partial_tile:
+            partial_tile_layer = layer_extract(partial_tile, layer)
+            if partial_tile_layer:
+                if layer_config.fields:
+                    partial_features[layer] = include_features(
+                        layer_config.fields,
+                        partial_tile_layer.features,
+                        layer_config.classes,
+                        tile_in_poly and tile_in_poly.point_in_poly(z, x, y),
+                    )
+                else:
+                    partial_features[layer] = partial_tile_layer.features
+            else:
+                partial_features[layer] = []
+
+    if len(list(filter(lambda f: f, partial_features))) == 0:
+        if full_tile is None:
             return None
-        elif full_tile_layer is None:
+        elif len(full_features) == 0:
             return full_raw_tile
-        elif len(full_features) == len(full_tile_layer.features):
+        elif all(full_features_same.values()):
             return full_raw_tile
         else:
-            merge_features = build_tile(layer, full_tile, full_features)
+            merge_features = build_tile(full_tile, full_features)
             return merge_features.serialize()
 
     else:
-        if full_features is None or full_tile_layer is None:
-            features = partial_features
+        if full_tile is None:
+            return partial_raw_tile
         else:
-            features = rank(full_features + partial_features)
+            features = {}
+            for layer in set(
+                list(full_features.keys()) + list(partial_features.keys())
+            ):
+                if len(full_features.get(layer, [])) > 0:
+                    features[layer] = rank(
+                        full_features[layer] + partial_features[layer]
+                    )
+                else:
+                    features[layer] = partial_features[layer]
 
-        merge_features = build_tile(layer, full_tile, features)
-        return merge_features.serialize()
+            merge_features = build_tile(full_tile, features)
+            return merge_features.serialize()
 
 
-def merge_tilejson(public_tile_urls, full, partial, headers, url_params: str):
+def merge_tilejson(
+    public_tile_urls, full, partial, layers: List[str], headers, url_params: str
+):
     full_tilejson = full.tilejson(headers, url_params)
     partial_tilejson = partial.tilejson(headers, url_params)
 
@@ -241,5 +259,22 @@ def merge_tilejson(public_tile_urls, full, partial, headers, url_params: str):
 
     if url_params:
         tilejson["tiles"] = [url + f"?{url_params}" for url in public_tile_urls]
+
+    for layer in layers:
+        if "vector_layers" in full_tilejson and not any(
+            filter(
+                lambda l: l["id"] == layer,  # type: ignore
+                full_tilejson["vector_layers"],  # type: ignore
+            )
+        ):
+            if "vector_layers" in partial_tilejson:
+                partial_layer = next(
+                    filter(
+                        lambda l: l["id"] == layer, partial_tilejson["vector_layers"]
+                    )
+                )
+                tilejson["vector_layers"].append(partial_layer)
+            else:
+                tilejson["vector_layers"].append({"id": layer})
 
     return tilejson
