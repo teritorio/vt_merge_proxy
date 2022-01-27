@@ -31,7 +31,7 @@ public_tile_url_prefixes = config["server"].get("public_tile_url_prefixes", [])
 config_by_host: Dict[str, Dict[str, Any]] = defaultdict(dict)
 for (config_id, config_source) in config["sources"].items():
     for host in config_source["hosts"]:
-        config_by_host[host][config_source["id"]] = config_source
+        config_by_host[host][config_id] = config_source
 
 
 @app.get("/")
@@ -80,7 +80,7 @@ async def data(request: Request):
 
     return [
         {
-            "id": conf["id"],
+            "id": id,
             "url": public_url(request)
             + public_base_path
             + app.url_path_for("tilejson", data_id=id),

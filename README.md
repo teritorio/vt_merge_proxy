@@ -44,7 +44,6 @@ mypy vt_merge_proxy/
 ```yaml
 sources:
     default:
-        id: teritorio-proxy
         hosts:
             - localhost
             - 127.0.0.1
