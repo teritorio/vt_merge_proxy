@@ -227,14 +227,17 @@ async def style(style_id: str, request: Request):
     if not config_id_style:
         raise HTTPException(status_code=404)
 
-    return StyleGL(
-        url=config_id_style["style_config"]["url"],
+    id = config_id_style["config_id"]
+    style_config = config_id_style["style_config"]
+
+    style_gl = StyleGL(
+        url=style_config["url"],
         overwrite={
             "sources": {
                 style_config["merged_source"]: {
                     "url": public_url(request)
                     + public_base_path
-                    + app.url_path_for("tilejson", data_id=config_id_style["config_id"])
+                    + app.url_path_for("tilejson", data_id=id)
                     + "?"
                     + str(request.query_params),
                 }
@@ -242,4 +245,10 @@ async def style(style_id: str, request: Request):
         }
         if style_config.get("merged_source")
         else {},
-    ).json()
+    )
+
+    for layer in style_config.get("layers") or []:
+        insert_before_id = layer["insert_before_id"]
+        style_gl.insert_layer(layer, before=insert_before_id)
+
+    return style_gl.json()

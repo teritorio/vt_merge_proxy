@@ -15,3 +15,12 @@ class StyleGL:
 
     def json(self):
         return self._gljson
+
+    def insert_layer(self, layer, before=None):
+        index, _ = next(
+            filter(lambda il: il[1]["id"] == before, enumerate(self._gljson["layers"]))
+        )
+        if index:
+            self._gljson["layers"].insert(index, layer)
+        else:
+            self._gljson["layers"].append(layer)
