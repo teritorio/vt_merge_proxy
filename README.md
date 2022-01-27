@@ -42,7 +42,7 @@ mypy vt_merge_proxy/
 `config.yaml`
 
 ```yaml
-styles:
+sources:
     default:
         id: teritorio-proxy
         hosts:
