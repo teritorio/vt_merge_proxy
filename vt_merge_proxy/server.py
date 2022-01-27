@@ -157,6 +157,14 @@ async def tile(data_id: str, z: int, x: int, y: int, request: Request):
 
 @app.get("/data/{data_id}.json")
 async def tilejson(data_id: str, request: Request):
+    host = public_host(request)
+    if host not in config_by_host:
+        raise HTTPException(status_code=404)
+
+    mc = merge_config.get(host) and merge_config[host].get(data_id)
+    if not mc:
+        raise HTTPException(status_code=404)
+
     try:
         path = f"{public_base_path}/data/{data_id}/{{z}}/{{x}}/{{y}}.pbf"
         if not public_tile_url_prefixes:
@@ -167,11 +175,6 @@ async def tilejson(data_id: str, request: Request):
                 for public_tile_url_prefixe in public_tile_url_prefixes
             ]
 
-        host = public_host(request)
-        if host not in config_by_host:
-            raise HTTPException(status_code=404)
-
-        mc = merge_config[host][data_id]
         return merge_tilejson(
             data_public_tile_urls,
             mc.sources[0],
