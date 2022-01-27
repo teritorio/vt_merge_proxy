@@ -65,6 +65,11 @@ sources:
         output:
             min_zoom: 14
 
+        styles:
+            teritorio-tourism-0.9:
+                url: https://vecto.teritorio.xyz/styles/teritorio-tourism-0.9/style.json
+                merged_source: openmaptiles
+
 server:
     public_base_path:
     public_tile_url_prefixes: []

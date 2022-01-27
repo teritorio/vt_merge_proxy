@@ -11,6 +11,7 @@ from starlette.responses import RedirectResponse
 
 from .merge import merge_tile, merge_tilejson
 from .sources import Source, sourceFactory
+from .style import StyleGL
 from .tile_in_poly import TileInPoly
 
 app = FastAPI()
@@ -32,6 +33,15 @@ config_by_host: Dict[str, Dict[str, Any]] = defaultdict(dict)
 for (config_id, config_source) in config["sources"].items():
     for host in config_source["hosts"]:
         config_by_host[host][config_id] = config_source
+
+style_by_host: Dict[str, Dict[str, Any]] = defaultdict(dict)
+for (config_id, config_source) in config["sources"].items():
+    for host in config_source["hosts"]:
+        for (style_id, style_config) in (config_source.get("styles") or {}).items():
+            style_by_host[host][style_id] = {
+                "config_id": config_id,
+                "style_config": style_config,
+            }
 
 
 @app.get("/")
@@ -187,3 +197,49 @@ async def tilejson(data_id: str, request: Request):
         raise HTTPException(
             status_code=error.response.status_code, detail=error.response.reason
         )
+
+
+@app.get("/styles.json")
+async def styles(request: Request):
+    host = public_host(request)
+    if host not in config_by_host:
+        raise HTTPException(status_code=404)
+
+    return [
+        # TODO add version and name
+        {
+            "id": id,
+            "url": public_url(request)
+            + public_base_path
+            + app.url_path_for("style", style_id=id),
+        }
+        for id in style_by_host[host].keys()
+    ]
+
+
+@app.get("/styles/{style_id}/style.json")
+async def style(style_id: str, request: Request):
+    host = public_host(request)
+    if host not in config_by_host:
+        raise HTTPException(status_code=404)
+
+    config_id_style = style_by_host.get(host) and style_by_host[host].get(style_id)
+    if not config_id_style:
+        raise HTTPException(status_code=404)
+
+    return StyleGL(
+        url=config_id_style["style_config"]["url"],
+        overwrite={
+            "sources": {
+                style_config["merged_source"]: {
+                    "url": public_url(request)
+                    + public_base_path
+                    + app.url_path_for("tilejson", data_id=config_id_style["config_id"])
+                    + "?"
+                    + str(request.query_params),
+                }
+            }
+        }
+        if style_config.get("merged_source")
+        else {},
+    ).json()
