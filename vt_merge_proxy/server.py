@@ -18,14 +18,14 @@ app = FastAPI()
 
 
 config = yaml.load(
-    open(os.environ.get("CONFIG", "config.yaml")).read(), Loader=yaml.BaseLoader
+    open(os.environ.get("CONFIG", "config.yaml")).read(), Loader=yaml.UnsafeLoader
 )
 print(config)
 
 if not config.get("server"):
     config["server"] = {}
 
-public_base_path = config["server"].get("public_base_path", "")
+public_base_path = config["server"].get("public_base_path") or ""
 public_tile_url_prefixes = config["server"].get("public_tile_url_prefixes", [])
 
 
