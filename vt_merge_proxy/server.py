@@ -248,7 +248,7 @@ async def style(style_id: str, request: Request):
     )
 
     for layer in style_config.get("layers") or []:
-        insert_before_id = layer["insert_before_id"]
+        insert_before_id = layer.get("insert_before_id")
         style_gl.insert_layer(layer, before=insert_before_id)
 
     return style_gl.json()
