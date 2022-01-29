@@ -235,6 +235,7 @@ async def style(style_id: str, request: Request):
         overwrite={
             "sources": {
                 style_config["merged_source"]: {
+                    "type": "vector",
                     "url": public_url(request)
                     + public_base_path
                     + app.url_path_for("tilejson", data_id=id)
