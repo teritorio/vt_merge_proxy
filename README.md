@@ -60,7 +60,7 @@ sources:
             poi_tourism:
                 fields: [superclass, class, subclass]
                 classes: classes.json
-            route_tourism:
+            features_tourism:
 
         output:
             min_zoom: 14
